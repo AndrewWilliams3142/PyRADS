@@ -50,6 +50,8 @@ def compute_tau_H2ON2(p,T,q,grid,params,RH=1.):
 def compute_tau_H2ON2_CO2dilute(p,T,q,ppv_CO2,grid,params,RH=1.):
 
     kappa = np.zeros( (grid.Np,grid.Nn) )
+    kappa_h2o = np.zeros( (grid.Np,grid.Nn) )
+    kappa_co2 = np.zeros( (grid.Np,grid.Nn) )
     for pres,temp,q_H2O in zip(p,T,q):
         p_H2O = RH * params.esat(temp)  # ...
         R_mean = q_H2O*params.Rv + (1.-q_H2O)*params.R
@@ -73,14 +75,16 @@ def compute_tau_H2ON2_CO2dilute(p,T,q,ppv_CO2,grid,params,RH=1.):
                             exe_file=Absorption_Continuum_MTCKD.mtckd_exe_H2O_N2)
 
         kappa[ p==pres,: ] = kappaH2O*q_H2O + kappaH2O_cont*q_H2O + kappaCO2*q_CO2  # save
+        kappa_h2o[ p==pres,: ] = kappaH2O*q_H2O + kappaH2O_cont*q_H2O  # save
+        kappa_co2[ p==pres,: ] = kappaCO2*q_CO2  # save
     print( "done! \n")
 
     # Integrate to get optical thickness:
     p2d = np.tile( p,(grid.Nn,1) ).T
-    tau = 1./(params.g*params.cosThetaBar) * cumtrapz( kappa,x=p2d,initial=0.,axis=0 )
-
-    return tau
-
+    tau     = 1./(params.g*params.cosThetaBar) * cumtrapz( kappa,x=p2d,initial=0.,axis=0 )
+    tau_h2o = 1./(params.g*params.cosThetaBar) * cumtrapz( kappa_h2o,x=p2d,initial=0.,axis=0 )
+    tau_co2 = 1./(params.g*params.cosThetaBar) * cumtrapz( kappa_co2,x=p2d,initial=0.,axis=0 )
+    return tau, tau_h2o, tau_co2
 
 # ---
 ##  HERE: dry atmosphere, CO2 only
